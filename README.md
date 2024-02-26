@@ -2,63 +2,12 @@
 
 In this study, Potree (http://www.potree.org) is adopted to create a prototype web portal. However, it lacks a built-in functionality for forward/backward projection between imagery and LiDAR data, as well as tools for displaying intensity profiles and lane width. These functions were developed within the Potree-based web portal. The forward/backward projection functions and intensity profile/lane width displaying tools are discussed in the following paragraphs.
 
-### System requirements ###
+### Forward/Backward projection ###
 
-**[[MATLAB](https://www.mathworks.com/l)]** 
-
-**[[CloudCompare or I-Live](https://www.danielgm.net/cc/)]** 
-
-Learning Part:
-
-**[[OS with GPU or Google Colab](https://colab.research.google.com/)]** 
-
-### Steps after Data Collection ###
-
-#### PWMMS-HA (Transit):
-
-Once the trajectory has been processed at the provided address:
-
-```bash
-DPRG Server:\Common\Data\platforms\PWMMS\PWMMS-HA\Year\Date_Month\gnssins\processed
-```
-This trajectory will serve as an input for the first step.
-
-1. LiDAR Reconstruction:
-
-* The following Folders should be created at the given address:
-
-```bash
-Raw (Including raw .pcap file from each LiDAR sensor)
-Reconstruction
-tile
-DPRG Server:\Common\Data\platforms\PWMMS\PWMMS-HA\Year\Date_Month\lidar\
-```
-In addition, these folders should include four main subfolders with the following names and The names of these subfolders are based on the mounted LiDAR sensors on PWMMS-HA (Transit):
-
-```bash
-HDL32EF
-HDL32EL
-HDL32ER
-VLP16
-```
- * This executable code should be utilized under the following name to reconstruct LiDAR point clouds:
-```bash
- PCAPModule_fixGprmc_03032021.exe
-```
-The input for this code includes the following folders and files:
-
-```bash
-bop (Folder including all Trajectory files)
-PCAP (Folder including all pcap raw files)
-bop_files.txt (File including address to bop files)
-pcap_files.txt (File including address to pcap files)
-calib_files.txt (File including the name of all calibration files with scalib format)
-config (File including PCAP Module Configuration File. One of the configurable parameters within this file is the range of reconstruction.)
-```
-
-The output for this code includes the following folders and files:
-```bash
-```
+* The forward projection function projects a selected point from an image onto the corresponding LiDAR point cloud.
+* The backward projection function projects an object point (red dot with a white-on-black label for the 3D coordinates) in a point cloud onto the corresponding images.
+  
+These projection functions enable users to visualize georeferenced imagery/LiDAR data captured simultaneously or at different times by the same or various MMS. Additionally, this projection function can be employed to assess the accuracy of trajectory and system calibration.
 
 #### Lane Marking Extraction (Transit/F150):
 
