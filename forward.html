@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang=""en">
+<head>
+	<meta charset="UTF-8">
+	<title>Forward Projection</title>
+<style>
+    #image-map {
+        width: 100%;
+        height: 300px;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+    }
+</style>
+</head>
+	<body>
+		<link rel="stylesheet" href="/web_server/potree/libs/leaflet/leaflet.css" />
+        <script src="/web_server/potree/libs/leaflet/leaflet.js"></script>
+		<div>
+			<h3> image coordinate </h3>
+			<table>
+				<tr>
+					<th>select image</th>
+					<th>x(px)</th>
+					<th>y(px)</th>
+				</tr>
+				<tr>
+					<td><select name="select_img" id="select_img" onchange="remove_selection(); remove_marker_image(); changeImage_leaflet();">
+                        </select></td>
+					<td id="xx">0</td>
+					<td id="yy">0</td>
+					<td><input type="button" onclick="forward()" value="forward"></td>
+				</tr>
+			</table>
+			
+		</div>
+		<div id="image-map" style="width:800px; height:500px"></div>
+		<div>
+            <h3> point cloud coordinate</h3>
+
+            <table>
+                <tr>
+					<th>point cloud</th>
+				</tr>
+				<tr>
+					<td><select name="select_cloud" id="select_cloud">
+						<option id="detect_cloud" value="detect_value">please click forward button</option>
+                        </select></td>
+
+					<td><input type="button" onclick="show()" value="show in Potree Viewer"></td>
+				</tr>
+            </table>
+        </div>
+	</body>
+	<script>
+        
+		if(localStorage.getItem('img_path')){
+            var img_path = localStorage.getItem('img_path');
+        }
+
+		if(localStorage.getItem('cloud_path')){
+            var cloud_path = localStorage.getItem('cloud_path');
+        }
+
+		var img_name = opener.document.getElementById("img_name").innerText;
+		console.log(typeof(img_name))
+		var eop_paths;
+		var iop_paths;
+		let iops;
+		let eops;
+		let img_index;
+		var map = L.map('image-map', {
+        minZoom: -10,
+        maxZoom: 10,
+        zoom: 1,
+        crs: L.CRS.Simple
+        });
+		let n = 1;
+		let m = 1;
+		var marker = L.marker([-9999, -9999],{
+			draggable: true
+		});
+		map.addLayer(marker);
+		var image;
+			// If map is clicked
+		map.on('click',function(e){
+			
+			lat = e.latlng.lat;
+			lon = e.latlng.lng;
+			console.log(lat)
+			console.log(lon)
+			console.log(width)
+			if (lat > height){
+				lat = height;
+			}
+			else if (lat < 0){
+				lat = 0;
+			}
+			if (lon > width){
+				lon = width;
+			}
+			else if (lon < 0){
+				lon = 0;
+			}
+			console.log(lat)
+			console.log(lon)
+
+			if (m != 1){
+				//map.removeLayer(image)
+				map.removeLayer(marker)
+			}
+			marker = L.marker([lat, lon],{
+				draggable: true
+			});
+			map.addLayer(marker);
+			marker.setLatLng([lat, lon]);
+
+			marker.on('dragend', function (e) {
+				if (lat > height){
+					lat = height;
+				}
+				else if (lat < 0){
+					lat = 0;
+				}
+				if (lon > width){
+					lon = width;
+				}
+				else if (lon < 0){
+					lon = 0;
+				}
+				document.getElementById('xx').innerText = marker.getLatLng().lat;
+				document.getElementById('yy').innerText = marker.getLatLng().lng;
+				remove_selection();
+			});
+
+			document.getElementById('xx').innerText = marker.getLatLng().lat;
+			document.getElementById('yy').innerText = marker.getLatLng().lng;
+			remove_selection();
+
+			m = m + 1;
+		});
+
+		window.onload = function () {
+			let base_url = "http://localhost:8000/converter/load_files?path="+img_path+'&img_name='+img_name;
+				fetch(base_url, {
+						headers : {
+							'Content-Type' : 'application/json'
+						}
+					})		
+						.then( (response) => {
+							return response.json();
+						}
+
+					)
+					.then(
+						(json) =>
+						{
+							jpg_files = json.jpg_files;
+							iops = json.iops;
+							eop_paths = json.eop_paths;
+							iop_paths = json.iop_paths;
+							eops = json.eops
+							img_index = json.index - 1;
+							let selectimg = document.getElementById("select_img");
+								
+							var option = document.createElement('option');
+							option.innerText = '[image list]'
+							selectimg.append(option)
+							
+							var option = document.createElement('option');
+							option.innerText = jpg_files[img_index];
+							option.value2 = eops[img_index];
+							option.value3 = iops[img_index][0];
+							option.value4 = iops[img_index][1];
+							option.value5 = eop_paths[img_index];
+							option.value6 = iop_paths[img_index];
+							option.value7 = iops[img_index];
+							selectimg.append(option)
+
+							if (img_name == option.innerText.split('/')[1] || img_name == option.innerText) {
+								option.selected = true;
+								changeImage_leaflet()
+							}
+
+						}
+					)
+		}
+
+		function changeImage_leaflet(){
+			let changeimg = document.getElementById("select_img");
+			let myimg = document.getElementById("myimg");
+			let index = changeimg.selectedIndex;
+			width = changeimg.options[index].value3;
+			height = changeimg.options[index].value4;
+			//document.getElementById("xx").innerText = changeimg.options[index].value1 + 'px';
+			//document.getElementById("yy").innerText = changeimg.options[index].value2 + 'px';
+			//document.getElementById("distance").innerText = changeimg.options[index].value5.toFixed(2) + 'm';
+			// get image width, height
+			var url = img_path + changeimg.options[index].innerText;
+			console.log(url);
+			var bounds =[[0,0], [changeimg.options[index].value4, changeimg.options[index].value3]];
+			console.log(changeimg.options[index].value5)
+			console.log(changeimg.options[index].value3)
+			// add the image overlay, 
+			// so that it covers the entire map
+			image = L.imageOverlay(url, bounds);
+			// marker lat lng
+			//var pointxy = new L.latLng([changeimg.options[index].value4 - changeimg.options[index].value2, changeimg.options[index].value1]);
+
+			//marker = new L.Marker(pointxy);
+			if (map.hasLayer(image)) {
+				console.log('yeah')
+				map.removeLayer(image);
+				//map.removeLayer(marker);
+				image.addTo(map);
+				//marker.addTo(map);
+			}
+			else {
+				image.addTo(map);
+				//marker.addTo(map);
+			}
+			//console.log(marker)
+			// tell leaflet that the map is exactly as big as the image
+			map.setView([changeimg.options[index].value4/2, changeimg.options[index].value3/2], -3);
+			map.setMaxBounds(bounds);
+			n = n + 1;
+		}
+
+		function remove_marker_image(){
+			if (n != 1){
+				map.removeLayer(image)
+				if (map.hasLayer(marker)){
+					console.log(marker)
+					map.removeLayer(marker);
+				}
+				document.getElementById('xx').innerText = 0;
+				document.getElementById('yy').innerText = 0;
+			}
+		}
+		function remove_selection(){
+			if (n != 1){
+				
+				let selectcloud = document.getElementById("select_cloud");
+				selectcloud.options.length = 0;
+				var option = document.createElement('option');
+                option.innerText = 'please click forward button'
+				selectcloud.append(option)
+			}
+		}
+		
+		function forward () {
+			let changeimg = document.getElementById("select_img");
+			let index = img_index + 1;
+			let pixel_x = document.getElementById("xx");
+			let pixel_y = document.getElementById("yy");
+			let x = pixel_x.innerText;
+			let y = pixel_y.innerText;
+			//let eops = changeimg.options[index].value2;
+			//let iops = changeimg.options[index].value7;
+			console.log(index);
+            let base_url = "http://localhost:8000/converter/forward_call?path="+cloud_path+'&index='+index+'&x='+x+'&y='+y;
+            fetch(base_url, {
+					headers : {
+						'Content-Type' : 'application/json'
+					}
+				})		
+					.then( (response) => {
+						return response.json();
+					}
+
+				)
+				.then(
+					(json) =>
+					{  
+						names = json.names;
+						xx = json.X;
+						yy = json.Y;
+						zz = json.Z;
+						let selectcloud = document.getElementById("select_cloud");
+                        selectcloud.remove(0);
+                        for (var i = 0; i < json.names.length; i++) {
+                            
+                            if (i == 0) {
+                                var option = document.createElement('option');
+                                option.innerText = '[forward projection is done!]'
+								option.value2 = NaN;
+                                option.value3 = NaN;
+                                option.value4 = NaN;
+                                selectcloud.append(option)
+                            }
+                            var option = document.createElement('option');
+                            option.innerText = names[i];
+							option.value2 = xx[i];
+							option.value3 = yy[i];
+							option.value4 = zz[i];
+                            selectcloud.append(option)
+						}
+						if (json.names.length == 0) {
+                            
+                            var option = document.createElement('option');
+                            option.innerText = '[forward projection is done! but no projected points]'
+							option.value2 = NaN;
+                            option.value3 = NaN;
+                            option.value4 = NaN;
+                            selectcloud.append(option)
+						}
+
+
+                    }        
+                )
+        }
+
+		function show () {
+			let changecloud = document.getElementById("select_cloud");
+			let index = changecloud.selectedIndex;
+			let data = changecloud.options[index]
+			window.opener.receiveDataFromPopup(data);
+        }
+	</script>
+</html>

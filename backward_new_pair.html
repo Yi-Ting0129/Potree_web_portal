@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang=""en">
+<head>
+    <meta charset="UTF-8">
+    <title>Backward Projection</title>
+<style>
+    #image-map {
+        width: 100%;
+        height: 300px;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+    }
+</style>
+</head>
+    <body>
+        <link rel="stylesheet" href="/libs/leaflet/leaflet.css" />
+        <script src="/libs/leaflet/leaflet.js"></script>
+        <div>
+            <h3>First point cloud coordinate</h3>
+            <!-- <input type="text" id="cInput_y">
+            <input type="text" id="cInput_z"> -->
+
+            <table>
+                <tr>
+                    <th>X1(m)</th>
+                    <th>Y1(m)</th>
+                    <th>Z1(m)</th>
+                    <th><input type="button" onclick="backward()" value="backward"></th>
+                </tr>
+                <tr>
+                    <td id="xxx1">X1</td>
+                    <td id="yyy1">Y1</td>
+                    <td id="zzz1">Z1</td>
+                    <td>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div>
+            <h3>First image coordinate </h3>
+            <table>
+                <tr>
+                    <th>x1(px)</th>
+                    <th>y1(px)</th>
+                    <th>distance1(m)</th>
+                    <th>select image</th>
+                    <th>distance threshold(m)</th>
+                </tr>
+                <tr>
+                    <td id="xx"></td>
+                    <td id="yy"></td>
+                    <td id="distance"></td>
+                    <td> <select name="select_img" id="select_img" onchange="remove_marker_image(); changeImage_leaflet();">
+                        <option id="detect_img" value="detect_value">please click backward button</option>
+                      </select> </td>
+                    <td> <input type="number" id="thres_number">
+                        <input type="button" onclick="changeSelect_threshold()" value="apply" /> 
+                        <input type="button" onclick="initialSelect()" value="reset" /></td>
+                        <input type="button" onclick="removemark()" value="remove" /></td>
+                </tr>
+
+            </table>
+        </div>
+
+        <div>
+            <h3>Second point cloud coordinate</h3>
+            <!-- <input type="text" id="cInput_y">
+            <input type="text" id="cInput_z"> -->
+
+            <table>
+                <tr>
+                    <th>X2(m)</th>
+                    <th>Y2(m)</th>
+                    <th>Z2(m)</th>
+                    <th><input type="button" onclick="backward_same ()" value="backward on the same image"></th>
+                </tr>
+                <tr>
+                    <td id="xxx2">X2</td>
+                    <td id="yyy2">Y2</td>
+                    <td id="zzz2">Z2</td>
+                    <td>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div>
+            <h3>Second image coordinate </h3>
+            <table>
+                <tr>
+                    <th>x2(px)</th>
+                    <th>y2(px)</th>
+                </tr>
+                <tr>
+                    <td id="xx2"></td>
+                    <td id="yy2"></td>
+                </tr>
+            </table>
+        </div>
+        <!-- <div style="position: relative;">
+            <img id="myimg" src="./init_image.png" onload="resize(this)"></img>
+        </div> -->
+        <!-- <button type="button" onclick="remove_marker_image()">remove marker and image</button>                          -->
+        <div id="image-map" style="width:800px; height:500px"></div>
+    </body>
+    <script>
+        function getParameter(name) {
+            name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+            var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+                results = regex.exec(location.search);
+            return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+        }
+        let get_xyz = getParameter("xyz");
+        let get_xyz2 = getParameter("xyz2");
+        console.log(get_xyz);
+        console.log(get_xyz2);
+        var XYZ = get_xyz.split(',')
+        let point_x = XYZ[0];
+        let point_y = XYZ[1];
+        let point_z = XYZ[2];
+        // var point_x = opener.document.getElementById('x').innerHTML;
+        document.getElementById("xxx1").innerText = point_x + 'm';
+        // var point_y = opener.document.getElementById('y').innerHTML;
+        document.getElementById("yyy1").innerText = point_y + 'm';
+        // var point_z = opener.document.getElementById('z').innerHTML;
+        document.getElementById("zzz1").innerText = point_z + 'm';
+
+        var XYZ2= get_xyz2.split(',')
+        let point_x2 = XYZ2[0];
+        let point_y2 = XYZ2[1];
+        let point_z2 = XYZ2[2];
+        // var point_x = opener.document.getElementById('x').innerHTML;
+        document.getElementById("xxx2").innerText = point_x2 + 'm';
+        // var point_y = opener.document.getElementById('y').innerHTML;
+        document.getElementById("yyy2").innerText = point_y2 + 'm';
+        // var point_z = opener.document.getElementById('z').innerHTML;
+        document.getElementById("zzz2").innerText = point_z2 + 'm';
+
+        if(localStorage.getItem('image_path')){
+            var img_path = JSON.parse(localStorage.getItem('image_path'));
+        }
+        
+        var map = L.map('image-map', {
+        minZoom: -10,
+        maxZoom: 10,
+        zoom: 0,
+        crs: L.CRS.Simple
+        });
+        var marker;
+        var image;
+        let n = 1;
+        let m = 1;
+        var original_select;
+        let names;
+        let cols;
+        let rows;
+        let widths;
+        let heights;
+        let distances;
+        let paths;
+        let selectimg2_value1 = [];
+        let selectimg2_value2 = [];
+        let selectimg2_value3 = [];
+        let selectimg2_value4 = [];
+        let selectimg2_value5 = [];
+        let selectimg2_value6 = [];
+
+        // let myselect = document.createElement('select')
+        // myselect.id = 'myselect'
+        // let myoption = document.createElement('option')
+        // myoption.value = 'myoption'
+        // myoption.id = 'myoption'
+        // myoption.innerText = ['test1']
+        // myselect.appendChild(myoption)
+        // document.body.appendChild(myselect);
+
+        function backward () {
+            let base_url = "http://128.210.209.66:8000/converter/backward_call?path="+img_path+'&x='+point_x+'&y='+point_y+'&z='+point_z;
+            fetch(base_url, {
+					headers : {
+						'Content-Type' : 'application/json'
+					}
+				})		
+					.then( (response) => {
+						return response.json();
+					}
+
+				)
+				.then(
+					(json) =>
+					{  
+                        names = json.names;
+                        cols = json.cols;
+                        rows = json.rows;
+                        widths = json.widths;
+                        heights = json.heights;
+                        distances = json.distance;
+                        paths = json.paths;
+                        let selectimg = document.getElementById("select_img");
+                        let detectimg = document.getElementById("detect_img");
+                        detectimg.remove(0);
+                        console.log(names)
+                        for (var i = 0; i < json.names.length; i++) {
+                            
+                            if (i == 0) {
+                                var option = document.createElement('option');
+                                option.innerText = '[backward projection is done!]'
+                                option.value1 = NaN;
+                                option.value2 = NaN;
+                                option.value3 = NaN;
+                                option.value4 = NaN;
+                                option.value5 = NaN;
+                                option.value6 = NaN;
+                                selectimg.append(option)
+                            }
+                            var option = document.createElement('option');
+                            option.innerText = names[i];
+                            option.value1 = cols[i];
+                            option.value2 = rows[i];
+                            option.value3 = widths[i];
+                            option.value4 = heights[i];
+                            option.value5 = distances[i];
+                            option.value6 = paths[i];
+                            selectimg.append(option)
+                        original_select = selectimg
+                        // let myselect = document.createElement('select')
+                        // let names = json.names;
+                        // let cols = json.cols;
+                        // let rows = json.rows;
+                        // myselect.id = 'myselect'
+                        // for (var i = 0; i < json.names.length; i++) {
+                        //     let myoption = document.createElement('option')
+                        //     myoption.value1 = json.cols[i]
+                        //     myoption.value2 = json.rows[i]
+                        //     myoption.innerText = json.names[i]
+                        //     myselect.appendChild(myoption)
+                            
+                        // }
+                        // myselect.onchange = changeImage;
+                        // // let mydiv = document.createElement('div')
+                        // // let button2 = document.createElement('button')
+                        // // button2.innerText = 'check'
+                        // // button2.onclick = test
+                        // // mydiv.appendChild(button2)
+                        // // document.body.appendChild(mydiv);
+                        // document.body.appendChild(myselect)
+                        
+                        
+
+
+                        // let myselect_update = document.getElementById('myselect')
+                        // let myoption_update = document.getElementById('myoption')
+                        // for (var i = 0; i < json.names.length; i++) {
+                        //     myoption_update.value = json.names[i]
+                        //     myoption_update.innerText = json.names[i]
+                        // }
+                        //myselect_update.appendChild(myselect_update);
+
+                        // document.write('Image'+' / ')
+                        // document.write('pixel[x]'+' / ')
+                        // document.write('pixel[y]')
+                        // document.write('<br>')
+ 
+                        // for (var i = 0; i < json.names.length; i++) {
+                        //     document.write(json.names[i]+' / ')
+                        //     document.write(json.cols[i]+' / ')
+                        //     document.write(json.rows[i])
+                        //     document.write('<br>')  
+                                   
+                            }
+                    }        
+                )
+        }
+
+        function backward_same () {
+            let base_url = "http://128.210.209.66:8000/converter/backward_call?path="+img_path+'&x='+point_x2+'&y='+point_y2+'&z='+point_z2;
+            fetch(base_url, {
+					headers : {
+						'Content-Type' : 'application/json'
+					}
+				})		
+					.then( (response) => {
+						return response.json();
+					}
+
+				)
+				.then(
+					(json) =>
+					{  
+                        names2 = json.names;
+                        cols2 = json.cols;
+                        rows2 = json.rows;
+                        widths2 = json.widths;
+                        heights2 = json.heights;
+                        distances2 = json.distance;
+                        paths2 = json.paths;
+
+                        console.log(cols2)
+
+                        let changeimg2 = document.getElementById("select_img");
+                        //let myimg = document.getElementById("myimg");
+                        let index = changeimg2.selectedIndex - 1;
+                        console.log(index)
+                        console.log(names2[index])
+                        document.getElementById("xx2").innerText = cols2[index] + 'px';
+                        document.getElementById("yy2").innerText = rows2[index] + 'px';
+                        //document.getElementById("distance2").innerText = changeimg2.options[index].value5.toFixed(2) + 'm';
+                        // get image width, height
+                        //var url = changeimg.options[index].value6;
+                        //console.log(url);
+                        var bounds2 =[[0,0], [widths2[index], heights2[index]]];
+                        // add the image overlay, 
+                        // so that it covers the entire map
+                        //image = L.imageOverlay(url, bounds);
+                        // marker lat lng
+                        var pointxy2 = new L.latLng([heights2[index] - rows2[index], cols2[index]]);
+
+                        marker2 = new L.Marker(pointxy2);
+                        marker2.addTo(map);
+                        console.log(marker2)
+                        // tell leaflet that the map is exactly as big as the image
+                        map.setView( [heights2[index] - rows2[index], cols2[index]], 1);
+                        map.setMaxBounds(bounds2);
+                        
+
+                    }        
+                )
+            
+                
+
+
+        }
+
+
+        // function changeImage(){
+        //     let changeimg = document.getElementById("select_img");
+        //     let myimg = document.getElementById("myimg");
+        //     let index = changeimg.selectedIndex;
+        //     myimg.src = img_path + changeimg.options[index].innerText;
+        //     document.getElementById("xx").innerText = changeimg.options[index].value1 + 'px';
+        //     document.getElementById("yy").innerText = changeimg.options[index].value2 + 'px';
+        //     document.getElementById("distance").innerText = changeimg.options[index].value5 + 'm';
+        // }
+        // calculate the edges of the image, in coordinate space
+        //var southWest = map.unproject([0, h], map.getMaxZoom()-1);
+        //var northEast = map.unproject([w, 0], map.getMaxZoom()-1);
+        //var bounds = new L.LatLngBounds(southWest, northEast);
+        function changeImage_leaflet(){
+            let changeimg = document.getElementById("select_img");
+            let myimg = document.getElementById("myimg");
+            let index = changeimg.selectedIndex;
+            document.getElementById("xx").innerText = changeimg.options[index].value1 + 'px';
+            document.getElementById("yy").innerText = changeimg.options[index].value2 + 'px';
+            document.getElementById("distance").innerText = changeimg.options[index].value5.toFixed(2) + 'm';
+            // get image width, height
+            var url = changeimg.options[index].value6;
+            console.log(url);
+            var bounds =[[0,0], [changeimg.options[index].value4, changeimg.options[index].value3]];
+            // add the image overlay, 
+            // so that it covers the entire map
+            image = L.imageOverlay(url, bounds);
+            // marker lat lng
+            var pointxy = new L.latLng([changeimg.options[index].value4 - changeimg.options[index].value2, changeimg.options[index].value1]);
+
+            marker = new L.Marker(pointxy);
+            if (map.hasLayer(image)) {
+                console.log('yeah')
+                map.removeLayer(image);
+                map.removeLayer(marker);
+                image.addTo(map);
+                marker.addTo(map);
+            }
+            else {
+                image.addTo(map);
+                marker.addTo(map);
+            }
+            console.log(marker)
+            // tell leaflet that the map is exactly as big as the image
+            map.setView( [changeimg.options[index].value4 - changeimg.options[index].value2, changeimg.options[index].value1], 1);
+            map.setMaxBounds(bounds);
+            n = n + 1;
+        }
+
+
+        function changeSelect_threshold(){
+
+            let inputvalue = document.getElementById("thres_number").value;
+            let selectimg = document.getElementById("select_img");
+            let length = selectimg.options.length;
+            //console.log(inputvalue)
+            for (var i = 0; i < length; i++) {
+                if (selectimg.options[i].value5 > inputvalue){
+                    selectimg.remove(i);
+                    i--;
+                }
+            }
+        }
+        function initialSelect(){
+            document.getElementById("select_img").options.length=0;
+            let selectimg = document.getElementById("select_img");
+            for (var i = 0; i < names.length; i++) {
+                
+                if (i == 0) {
+                    var option = document.createElement('option');
+                    option.innerText = '[backward projection is done!]'
+                    option.value1 = NaN;
+                    option.value2 = NaN;
+                    option.value3 = NaN;
+                    option.value4 = NaN;
+                    option.value5 = NaN;
+                    option.value6 = NaN;
+                    selectimg.append(option)
+                }
+                var option = document.createElement('option');
+                option.innerText = names[i];
+                option.value1 = cols[i];
+                option.value2 = rows[i];
+                option.value3 = widths[i];
+                option.value4 = heights[i];
+                option.value5 = distances[i];
+                option.value6 = img_paths[i];
+                selectimg.append(option)
+            }
+        }
+        function remove_marker_image(){
+            if (n != 1){
+                map.removeLayer(image)
+                map.removeLayer(marker)
+            }
+        }
+        function removemark(){
+            map.removeLayer(marker)
+        }
+       </script>
+</html>

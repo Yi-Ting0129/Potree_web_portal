@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Intensity Profile</title>
+	<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+
+
+<div>
+	<h3>intensity profile data</h3>
+	<select name="select_lanewidth" id="select_lanewidth" onchange="changeLanewidth();">
+	</select>
+	
+</div>
+
+<div id="IntProPlot" style="width:100%;max-width:700px"></div>
+
+<div>
+	<p>*Mobile LiDAR intensity data are averaged to every 20 cm.
+	</p>
+
+	<p>**Mobile retroreflectometer provides an accumulated average retroreflective reading every 0.1 mile; its measurements are replicated to the same frequency for the LiDAR intensity.
+	</p>
+</div>
+
+<script>
+
+	// option // change path // name
+	var location_name = localStorage.getItem('location_name');
+
+	if (location_name == 'I-74'){
+		var lane_path = '/lane_data/I74/intensity_profile/'
+	} else if (location_name == 'I-65') {
+		var lane_path = '/lane_data/I65/intensity_profile/'
+	} else if (location_name == 'I-465') {
+		var lane_path = '/lane_data/I465/intensity_profile/'
+	} else if (location_name == 'US52/US41') {
+		var lane_path = '/lane_data/US52_US41/intensity_profile_20cm_norm/'
+		var lane_path_UHA = '/lane_data/US52_US41/intensity_profile_20cm_norm_UHA/'
+		var lane_path2 = '/lane_data/US52_US41/intensity_profile_20cm_orig/'
+		var lane_path2_UHA = '/lane_data/US52_US41/intensity_profile_20cm_orig_UHA/'
+		var lane_path3 = '/lane_data/US52_US41/retro_20cm/'
+	} else if (location_name == 'I65_Retro') {
+		var lane_path = '/lane_data/I65/intensity_profile_I65_Retro_normalized_intensity/'
+		var lane_path_UHA = 'undefined'
+		var lane_path2 = '/lane_data/I65/intensity_profile_I65_Retro_original_intensity/'
+		var lane_path2_UHA = 'undefined'
+		var lane_path3 = '/lane_data/I65/Retro/'
+	}
+
+
+	if(localStorage.getItem('IP_area')){
+		var lanewidth_area = JSON.parse(localStorage.getItem('IP_area'));
+	}
+
+	if(localStorage.getItem('IP_area2')){
+		var lanewidth_area2 = JSON.parse(localStorage.getItem('IP_area2'));
+	}
+
+	if(localStorage.getItem('Retro_area')){
+		var retro_area = JSON.parse(localStorage.getItem('Retro_area'));
+	}
+
+//console.log(lanewidth_area)
+  
+
+
+// option // change path // name
+	window.onload = function () {
+			
+		let selectlanewidth = document.getElementById("select_lanewidth");				
+		var option = document.createElement('option');
+		if (typeof lane_path3 !== 'undefined'){
+			option.innerText = '[intensity/retro-reflectivity profile list]'
+		} else {
+			option.innerText = '[intensity profile list]'
+		}
+			
+		selectlanewidth.append(option)
+
+		for (let i in lanewidth_area ) {
+                            
+            var option = document.createElement('option');
+            option.innerText = lanewidth_area[i];
+            selectlanewidth.append(option)
+		}
+
+	}
+
+	function changeLanewidth(){
+
+		let changelanewidth = document.getElementById("select_lanewidth");
+		let index = changelanewidth.selectedIndex;
+
+		var file = new XMLHttpRequest();
+		file.open("GET", lane_path + lanewidth_area[index-1] + ".txt", false);
+		file.onreadystatechange = function ()
+		{
+			if(file.readyState === 4 && (file.status === 200 || file.status == 0))
+			{
+				var rows= file.responseText.split(/\r?\n/);
+				//alert(rows);
+			}
+
+		}
+		file.send(null);
+
+		var xArray = [];
+		var yArray = [];
+		var x = [];
+		var y = [];
+		var z = [];
+		//console.log(file.responseText.split(/\r?\n/).length)
+
+		if (typeof lane_path_UHA !== 'undefined')
+		{
+			var file_UHA = new XMLHttpRequest();
+			file_UHA.open("GET", lane_path_UHA + lanewidth_area2[index-1] + ".txt", false);
+			console.log(lane_path_UHA + lanewidth_area2[index-1])
+			file_UHA.onreadystatechange = function ()
+			{
+				if(file_UHA.readyState === 4 && (file_UHA.status === 200 || file_UHA.status == 0))
+				{
+					var rows_UHA = file_UHA.responseText.split(/\r?\n/);
+						//alert(rows);
+				}
+
+			}
+			file_UHA.send(null);
+
+			var xArray_UHA = [];
+			var yArray_UHA = [];
+			var x_UHA = [];
+			var y_UHA = [];
+			var z_UHA = [];
+		}
+
+		if (typeof lane_path2 !== 'undefined')
+		{
+			var file2 = new XMLHttpRequest();
+			file2.open("GET", lane_path2 + lanewidth_area[index-1] + ".txt", false);
+			console.log(lane_path2 + lanewidth_area[index-1])
+			file2.onreadystatechange = function ()
+			{
+				if(file2.readyState === 4 && (file2.status === 200 || file2.status == 0))
+				{
+					var rows2= file2.responseText.split(/\r?\n/);
+						//alert(rows);
+				}
+
+			}
+			file2.send(null);
+
+			var xArray2 = [];
+			var yArray2 = [];
+			var x2 = [];
+			var y2 = [];
+			var z2 = [];
+		}
+
+		if (typeof lane_path2_UHA !== 'undefined')
+		{
+			var file2_UHA = new XMLHttpRequest();
+			file2_UHA.open("GET", lane_path2_UHA + lanewidth_area2[index-1] + ".txt", false);
+			console.log(lane_path2_UHA + lanewidth_area2[index-1])
+			file2_UHA.onreadystatechange = function ()
+			{
+				if(file2_UHA.readyState === 4 && (file2_UHA.status === 200 || file2_UHA.status == 0))
+				{
+					var rows2_UHA = file2_UHA.responseText.split(/\r?\n/);
+						//alert(rows);
+				}
+
+			}
+			file2_UHA.send(null);
+
+			var xArray2_UHA = [];
+			var yArray2_UHA = [];
+			var x2_UHA = [];
+			var y2_UHA = [];
+			var z2_UHA = [];
+		}
+
+		if (typeof lane_path3 !== 'undefined')
+		{
+			var file3 = new XMLHttpRequest();
+			file3.open("GET", lane_path3 + retro_area[index-1] + ".txt", false);
+			//console.log(lane_path3 + retro_area[index-1])
+			file3.onreadystatechange = function ()
+			{
+				if(file3.readyState === 4 && (file3.status === 200 || file3.status == 0))
+				{
+					var rows3= file3.responseText.split(/\r?\n/);
+						//alert(rows);
+				}
+
+			}
+			file3.send(null);
+
+			var xArray3 = [];
+			var yArray3 = [];
+			var x3 = [];
+			var y3 = [];
+			var z3 = [];
+		}
+
+		const lines = file.responseText.split(/\r?\n/);
+
+		if (typeof lane_path_UHA !== 'undefined'){
+			var lines_UHA = file_UHA.responseText.split(/\r?\n/);
+		
+		}
+
+		if (typeof lane_path2 !== 'undefined'){
+			var lines2 = file2.responseText.split(/\r?\n/);
+		
+		}
+
+		if (typeof lane_path2_UHA !== 'undefined'){
+			var lines2_UHA = file2_UHA.responseText.split(/\r?\n/);
+		
+		}
+
+		if (typeof lane_path3 !== 'undefined'){
+			var lines3 = file3.responseText.split(/\r?\n/);
+		//console.log(lines3)
+		}
+
+		for(let i = 1; i < lines.length; i++){
+			const line = lines[i];
+			const tokens = line.split(/\s+/);
+
+			xArray.push(parseFloat(tokens[3]))
+			yArray.push(parseFloat(tokens[4]))
+			x.push(parseFloat(tokens[0]))
+			y.push(parseFloat(tokens[1]))
+			z.push(parseFloat(tokens[2]))
+
+		}
+
+		if (typeof lane_path_UHA !== 'undefined'){
+			for(let i = 1; i < lines_UHA.length; i++){
+				const line_UHA = lines_UHA[i];
+				const tokens_UHA = line_UHA.split(/\s+/);
+
+				xArray_UHA.push(parseFloat(tokens_UHA[3]))
+				yArray_UHA.push(parseFloat(tokens_UHA[4]))
+				x_UHA.push(parseFloat(tokens_UHA[0]))
+				y_UHA.push(parseFloat(tokens_UHA[1]))
+				z_UHA.push(parseFloat(tokens_UHA[2]))
+
+			}
+			var data_UHA = {
+				x:xArray_UHA,
+				y:yArray_UHA,
+				name: 'UHA Normalized intensity',
+				yaxis: "y4",
+				mode:"markers"
+			};
+		}
+
+		if (typeof lane_path2 !== 'undefined'){
+			for(let i = 1; i < lines2.length; i++){
+				const line2 = lines2[i];
+				const tokens2 = line2.split(/\s+/);
+
+				xArray2.push(parseFloat(tokens2[3]))
+				yArray2.push(parseFloat(tokens2[4]))
+				x2.push(parseFloat(tokens2[0]))
+				y2.push(parseFloat(tokens2[1]))
+				z2.push(parseFloat(tokens2[2]))
+
+			}
+			var data2 = {
+				x:xArray2,
+				y:yArray2,
+				name: 'HA Original intensity',
+				yaxis: "y2",
+				mode:"markers"
+			};
+		}
+
+		if (typeof lane_path2_UHA !== 'undefined'){
+			for(let i = 1; i < lines2_UHA.length; i++){
+				const line2_UHA = lines2_UHA[i];
+				const tokens2_UHA = line2_UHA.split(/\s+/);
+
+				xArray2_UHA.push(parseFloat(tokens2_UHA[3]))
+				yArray2_UHA.push(parseFloat(tokens2_UHA[4]))
+				x2_UHA.push(parseFloat(tokens2_UHA[0]))
+				y2_UHA.push(parseFloat(tokens2_UHA[1]))
+				z2_UHA.push(parseFloat(tokens2_UHA[2]))
+
+			}
+			var data2_UHA = {
+				x:xArray2_UHA,
+				y:yArray2_UHA,
+				name: 'UHA Original intensity',
+				yaxis: "y5",
+				mode:"markers"
+			};
+		}
+
+		if (typeof lane_path3 !== 'undefined'){
+			for(let i = 1; i < lines3.length; i++){
+				const line3 = lines3[i];
+				const tokens3 = line3.split(/\s+/);
+
+				xArray3.push(parseFloat(tokens3[3]))
+				yArray3.push(parseFloat(tokens3[4]))
+				x3.push(parseFloat(tokens3[0]))
+				y3.push(parseFloat(tokens3[1]))
+				z3.push(parseFloat(tokens3[2]))
+
+			}
+			var data3 = {
+				x:xArray3,
+				y:yArray3,
+				name: 'Retro-reflectivty',
+				yaxis: "y3",
+				mode:"markers"
+			};
+		}
+		
+		//console.log(xArray)
+		//console.log(yArray)
+
+		// Define Data
+		var data1 = {
+			x: xArray,
+			y: yArray,
+			name: 'HA Normalized intensity',
+			mode:"markers"
+		};
+
+		if (typeof data3 !== 'undefined'){
+
+			if (typeof data_UHA !== 'undefined'){
+				var data_all = [data1, data_UHA, data2, data2_UHA, data3];
+			} else {
+				var data_all = [data1, data2, data3];
+			}
+
+		} else if (typeof data2 !== 'undefined'){
+
+			if (typeof data_UHA !== 'undefined'){
+				var data_all = [data1, data_UHA, data2, data2_UHA];
+			} else {
+				var data_all = [data1, data2];
+			}
+		} else{
+			if (typeof data_UHA !== 'undefined'){
+				var data_all = [data1, data_UHA];
+			} else {
+				var data_all = [data1];
+			}
+		}
+		
+
+		if (typeof data3 !== 'undefined'){
+			
+			var layout = {
+				xaxis: {range: [Math.min(xArray), Math.max(xArray)], title: "Mile Markers"},
+				yaxis: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left"},
+				yaxis2: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left", overlaying: "y"},
+				yaxis3: {range: [0, Math.max(yArray3)], title: "Retroreflectivity**(mcd/lx/m^2)", titlefont: {color: "#006400"}, tickfont: {color: "#006400"}, side: "right", overlaying: "y"},
+				yaxis4: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left", overlaying: "y"},
+				yaxis5: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left", overlaying: "y"},
+				title: lanewidth_area[index-1],
+				showlegend: true,
+				legend: {"orientation": "h", xanchor:"center", x:0.5, y:2}
+			};
+		
+		} else if (typeof data2 !== 'undefined'){
+			var layout = {
+				xaxis: {range: [Math.min(xArray), Math.max(xArray)], title: "Mile Markers"},
+				yaxis: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left"},
+				yaxis2: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left", overlaying: "y"},
+				yaxis4: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left", overlaying: "y"},
+				yaxis5: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left", overlaying: "y"},
+				title: lanewidth_area[index-1],
+				showlegend: true,
+				legend: {"orientation": "h", xanchor:"center", x:0.5, y:2}
+			};
+		} else{
+			var layout = {
+				xaxis: {range: [Math.min(xArray), Math.max(xArray)], title: "Mile Markers"},
+				yaxis: {range: [0, 255], title: "Intensity", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left"},
+				yaxis4: {range: [0, 255], title: "Intensity*", titlefont: {color: "#000000"}, tickfont: {color: "#000000"}, side: "left", overlaying: "y"},
+				title: lanewidth_area[index-1],
+				showlegend: true,
+				legend: {"orientation": "h", xanchor:"center", x:0.5, y:2}
+			};
+		}
+
+		// Define Layout
+
+
+		// Display using Plotly
+		Plotly.newPlot('IntProPlot', data_all, layout);
+
+		IntProPlot.on('plotly_click', function(data_all){
+			var pn = ''
+			//var pn2 = ''
+			//var pn3 = ''
+			pn = data_all.points[0].pointNumber;
+
+			
+			console.log(pn)
+			let data = changelanewidth.options[index]
+				
+				if (data_all.points[0].curveNumber == 0){
+					data.value2 = parseFloat(x[pn]);
+					data.value3 = parseFloat(y[pn]);
+					data.value4 = parseFloat(z[pn]);
+				} else if (data_all.points[0].curveNumber == 1) {
+					data.value2 = parseFloat(x2[pn]);
+					data.value3 = parseFloat(y2[pn]);
+					data.value4 = parseFloat(z2[pn]);
+				} else{
+					data.value2 = parseFloat(x3[pn]);
+					data.value3 = parseFloat(y3[pn]);
+					data.value4 = parseFloat(z3[pn]);
+				}
+				
+			
+			window.opener.receiveDataFromPopup(data);
+
+		});
+	}
+
+
+</script>
+
+</body>
+</html>

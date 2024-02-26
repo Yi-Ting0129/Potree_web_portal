@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Lane Width</title>
+		<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+	</head>
+<body>
+<div>
+	<h3>lane width data</h3>
+	<select name="select_lanewidth" id="select_lanewidth" onchange="changeLanewidth();">
+	</select>
+	
+</div>
+
+<div id="LaneWidthPlot" style="width:100%;max-width:700px"></div>
+
+<script>
+	
+
+// option // change path // name
+var location_name = localStorage.getItem('location_name');
+
+if (location_name == 'I-74'){
+	var lane_path = '/lane_data/I74/lane_width/'
+} else if (location_name == 'I-65') {
+	var lane_path = '/lane_data/I65/lane_width/'
+} else if (location_name == 'I-465') {
+	var lane_path = '/lane_data/I465/lane_width/'
+} else if (location_name == 'US52/US41') {
+	var lane_path = '/lane_data/US52_US41/lane_width/'
+}
+
+if(localStorage.getItem('LW_area')){
+	var lanewidth_area = JSON.parse(localStorage.getItem('LW_area'));
+	}
+
+
+// option // change path // name
+	window.onload = function () {
+			
+		let selectlanewidth = document.getElementById("select_lanewidth");				
+		var option = document.createElement('option');
+		option.innerText = '[lanewidth list]'
+		selectlanewidth.append(option)
+
+		for (let i in lanewidth_area ) {
+                            
+            var option = document.createElement('option');
+            option.innerText = lanewidth_area[i];
+            selectlanewidth.append(option)
+		}
+
+	}
+
+	function changeLanewidth(){
+
+		let changelanewidth = document.getElementById("select_lanewidth");
+		let index = changelanewidth.selectedIndex;
+
+		var file = new XMLHttpRequest();
+		file.open("GET", lane_path + lanewidth_area[index-1] + ".txt", false);
+		file.onreadystatechange = function ()
+		{
+			if(file.readyState === 4 && (file.status === 200 || file.status == 0))
+			{
+				var rows= file.responseText.split(/\r?\n/);
+				//alert(rows);
+			}
+
+		}
+		file.send(null);
+
+		var xArray = [];
+		var yArray = [];
+		var x1 = [];
+		var y1 = [];
+		var z1 = [];
+		var x2 = [];
+		var y2 = [];
+		var z2 = [];
+
+		const lines = file.responseText.split(/\r?\n/);
+
+    	for(let i = 1; i < lines.length; i++){
+			const line = lines[i];
+			const tokens = line.split(/\s+/);
+
+        	xArray.push(parseFloat(tokens[2]))
+			yArray.push(parseFloat(tokens[1]))
+			x1.push(parseFloat(tokens[3]))
+			y1.push(parseFloat(tokens[4]))
+			z1.push(parseFloat(tokens[5]))
+			x2.push(parseFloat(tokens[6]))
+			y2.push(parseFloat(tokens[7]))
+			z2.push(parseFloat(tokens[8]))
+
+		}
+
+		// Define Data
+		var data1 = [{
+		x:xArray,
+		y:yArray,
+		mode:"markers"
+		}];
+
+		// Define Layout
+		var layout = {
+		xaxis: {range: [Math.min(xArray), Math.max(xArray)], title: "Mile Markers"},
+		yaxis: {range: [9, 14], title: "Lane Width (ft)"},  
+		title: lanewidth_area[index-1]
+		};
+
+		// Display using Plotly
+		Plotly.newPlot("LaneWidthPlot", data1, layout);
+
+		LaneWidthPlot.on('plotly_click', function(data1){
+		var pn=''
+
+		for(var i=0; i < data1.points.length; i++){
+			pn = data1.points[i].pointNumber;
+			//tn = data.points[i].curveNumber;
+		};
+		
+		console.log(pn)
+		let data = changelanewidth.options[index]
+
+		data.value2 = parseFloat(x1[pn]);
+		data.value3 = parseFloat(y1[pn]);
+		data.value4 = parseFloat(z1[pn]);
+		data.value5 = parseFloat(x2[pn]);
+		data.value6 = parseFloat(y2[pn]);
+		data.value7 = parseFloat(z2[pn]);
+		
+		window.opener.receiveDataFromPopup2(data);
+
+		});
+	}
+
+
+	
+
+
+</script>
+
+</body>
+</html>
